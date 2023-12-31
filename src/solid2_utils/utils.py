@@ -1,4 +1,4 @@
-from typing import Iterable, Tuple, List
+from typing import Iterable, Tuple, List, Optional
 from solid2 import cube, P3
 from solid2.core.object_base import OpenSCADObject
 from pathlib import Path
@@ -31,15 +31,18 @@ def save_to_str_scad(output_scad_basename: str, output_stl_basename: str | None,
         from multiprocessing import Pool
 
     stl_task: List[Tuple[OpenSCADObject, str, bool]] = []
-    all_obj: OpenSCADObject = cube(0)
+    all_obj: Optional[OpenSCADObject] = None
     next_pos = [0, 0]
     for obj_and_dim, filename_prefix in output:
         obj, dim = obj_and_dim
         filename = output_scad_basename + filename_prefix + ".scad"
         stl_task.append((obj, output_scad_basename + filename_prefix + ".stl", verbose))
         obj.save_as_scad(filename)
-        all_obj += obj.left(next_pos[0]).fwd(next_pos[1])
-        next_pos = (next_pos[0] - dim[1] - 10, next_pos[1] - dim[1] - 10)
+        if all_obj is None:
+            all_obj = obj.left(next_pos[0]).fwd(next_pos[1])
+        else:
+            all_obj += obj.left(next_pos[0]).fwd(next_pos[1])
+        next_pos = (next_pos[0] - (dim[0] * 1.05), next_pos[1] - (dim[1] * 1.05))
 
     filename = output_scad_basename + f"{Path(__file__).stem}_all.scad"
     all_obj.save_as_scad(filename)
