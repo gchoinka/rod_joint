@@ -38,13 +38,13 @@ def middle_bolt() -> List[Tuple[Tuple[OpenSCADObject, P3], str]]:
     top_chamfer_h = 3
     torx_mask_base = torx_mask2d(size=60, _fa=1, _fs=1)
     torx_nut = scale([2, 2, 1])(
-        linear_extrude(height=nut_l - top_chamfer_h, center=False, scale=1.17)(torx_mask_base))
-    torx_nut += scale([2.34, 2.34, 1])(
-        linear_extrude(height=top_chamfer_h / 2, center=False, scale=0.9625)(torx_mask_base)).up(
+        linear_extrude(height=nut_l - top_chamfer_h, center=False, scale=1)(torx_mask_base))
+    torx_nut += scale([2, 2, 1])(
+        linear_extrude(height=top_chamfer_h , center=False, scale=0.9)(torx_mask_base)).up(
         nut_l - top_chamfer_h + top_chamfer_h / 2 * 0)
-    torx_nut += scale([2.25, 2.25, 1])(
-        linear_extrude(height=top_chamfer_h / 2, center=False, scale=0.8)(torx_mask_base)).up(
-        nut_l - top_chamfer_h + top_chamfer_h / 2 * 1)
+    # torx_nut += scale([2, 2, 1])(
+    #     linear_extrude(height=top_chamfer_h / 2, center=False, scale=1)(torx_mask_base)).up(
+    #     nut_l - top_chamfer_h + top_chamfer_h / 2 * 1)
     torx_nut += cylinder(r1=washer_r, r2=bold_d / 2, h=5).up(2)
     torx_nut += cylinder(r=washer_r, h=2)
 
@@ -58,32 +58,40 @@ def middle_bolt() -> List[Tuple[Tuple[OpenSCADObject, P3], str]]:
 
 def make_joint_half() -> List[Tuple[Tuple[OpenSCADObject, P3], str]]:
     rotate_part_h = 3
-    compression_gap_h = 5
+    compression_gap_h = pipe_r / 2
     top_washer_h = pipe_r + rotate_part_h - compression_gap_h / 2
     rotation_washer_h = top_washer_h
     top_washer_z = top_washer_h + compression_gap_h
+    joint_r = (3.25 * pipe_r)
+    joint_r = (bold_d/2 + pipe_r*2+rotate_part_h+rotate_part_h)
+    dummy_rod_l = joint_r*2
 
-    rotation_washer = cylinder(r1=75 / 2, r2=75 / 2, h=rotation_washer_h, center=False, _fn=180)
-    top_washer = cylinder(r1=75 / 2, r2=75 / 2 - 5, h=top_washer_h, center=False, _fn=180).up(
+    top_washer_reduction = 15 / 15
+    rotation_washer = cylinder(r1=joint_r, r2=joint_r, h=rotation_washer_h, center=False, _fn=180)
+    top_washer = cylinder(r1=joint_r, r2=joint_r * top_washer_reduction, h=top_washer_h, center=False, _fn=180).up(
         pipe_r + rotate_part_h + compression_gap_h / 2)
     compression_gap_washer = cylinder(r1=120 / 2, r2=120 / 2, h=compression_gap_h, center=True, _fn=180).up(
         rotate_part_h + pipe_r)
 
-    dummy_rod_pos1 = [bold_d + 5, 0, pipe_r + rotate_part_h]
-    dummy_rod = cylinder(r=pipe_r+0.2, h=120, center=True).rotate([90, 0, 0]).translate(dummy_rod_pos1)
-    pipe_1 = cylinder(r=pipe_r+rotate_part_h+2, h=90, center=True).rotate([90, 0, 0]).translate(dummy_rod_pos1)
-    dummy_rod_pos2 = [-(bold_d + 5), 0, pipe_r + rotate_part_h]
-    dummy_rod += cylinder(r=pipe_r+0.2, h=120, center=True).rotate([90, 0, 0]).translate(dummy_rod_pos2)
-    pipe_2 = cylinder(r=pipe_r+rotate_part_h+2, h=90, center=True).rotate([90, 0, 0]).translate(dummy_rod_pos2)
+    dummy_rod_pos1 = [bold_d/2+pipe_r+0.5, 0, pipe_r + rotate_part_h]
+    dummy_rod = cylinder(r=pipe_r + 0.2, h=dummy_rod_l+preview_fix*2, center=True, _fn=60).rotate([90, 0, 0]).translate(dummy_rod_pos1)
+    pipe_1 = cylinder(r=pipe_r + rotate_part_h + 2, h=dummy_rod_l, center=True).rotate([90, 0, 0]).translate(dummy_rod_pos1)
+    dummy_rod_pos2 = [-(bold_d/2+pipe_r+0.5), 0, pipe_r + rotate_part_h]
+    dummy_rod += cylinder(r=pipe_r + 0.2, h=dummy_rod_l+preview_fix*2, center=True, _fn=60).rotate([90, 0, 0]).translate(dummy_rod_pos2)
+    pipe_2 = cylinder(r=pipe_r + rotate_part_h + 2, h=dummy_rod_l, center=True).rotate([90, 0, 0]).translate(dummy_rod_pos2)
 
     middle_hole = cylinder(r=bold_d / 2, h=120, center=True, _fn=180)
-    middle_hole_slopy = cylinder(r1=bold_d / 2+0.8, r2=bold_d / 2+0.1, h=top_washer_h+preview_fix*2, center=False, _fn=180).up(top_washer_z-preview_fix)
+    middle_hole_slopy = cylinder(r1=bold_d / 2 + 0.8, r2=bold_d / 2 + 0.1, h=top_washer_h + preview_fix * 2,
+                                 center=False, _fn=180).up(top_washer_z - preview_fix)
+    # middle_hole_slopy = middle_hole
 
-    bottom_cutoff = cylinder(r=60, h=20).rotate([180,0,0])
-    top_cuttoff = cylinder(r=60, h=20).up(rotation_washer_h+compression_gap_h+rotation_washer_h)
+
+    bottom_cutoff = cylinder(r=60, h=20).rotate([180, 0, 0])
+    top_cuttoff = cylinder(r=60, h=20).up(rotation_washer_h + compression_gap_h + rotation_washer_h)
     bottom_part = (rotation_washer - dummy_rod) - middle_hole
     top_bottom_threshold = bottom_cutoff + top_cuttoff
-    top_part = (top_washer + (pipe_1 + pipe_2) - compression_gap_washer - top_bottom_threshold -middle_hole) - dummy_rod - middle_hole_slopy
+    top_part = (top_washer + (
+                pipe_1 + pipe_2) - compression_gap_washer - top_bottom_threshold - middle_hole) - dummy_rod - middle_hole_slopy
 
     return [((bottom_part + top_part, (pipe_r * 2, pipe_r * 2, pipe_r * 2)), "joint_half"), ]
 
