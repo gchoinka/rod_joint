@@ -30,7 +30,7 @@ def middle_bolt() -> List[Tuple[Tuple[OpenSCADObject, P3], str]]:
 
     floated_bolt_washer = cylinder(r=washer_r, h=washer_h, center=True).up(washer_h / 2)
     floated_bolt_washer_inside = intersection()(
-        cylinder(r=bold_d / 2, h=washer_h + preview_fix * 3, center=True).up(washer_h / 2), flat_face_box)
+        cylinder(r=bold_d / 2, h=washer_h + preview_fix * 3, center=True).up(washer_h / 2), scale(1.03)(flat_face_box))
     floated_bolt_washer = floated_bolt_washer - floated_bolt_washer_inside.down(preview_fix)
 
     inside_thread = buttress_threaded_rod(d=bold_d, l=nut_l + preview_fix * 3, pitch=2, _fa=1, _fs=0.5, internal=True,
@@ -56,25 +56,42 @@ def middle_bolt() -> List[Tuple[Tuple[OpenSCADObject, P3], str]]:
             ]
 
 
-def rod_cradle() -> List[Tuple[Tuple[OpenSCADObject, P3], str]]:
-    flat = cylinder(r=75 / 2, h=2, center=False)
-    flat += cylinder(r1=75 / 2, r2=75 / 2, h=12, center=False).up(2)
-    rod = cylinder(r=pipe_r, h=75, center=True).rotate([90, 0, 0]).translate([bold_d + 5, 0, 2 + pipe_r])
-    return [((rod + flat, (pipe_r * 2, pipe_r * 2, pipe_r * 2)), "rod"),
-            ]
+def make_joint_half() -> List[Tuple[Tuple[OpenSCADObject, P3], str]]:
+    rotate_part_h = 3
+    compression_gap_h = 5
+    top_washer_h = pipe_r + rotate_part_h - compression_gap_h / 2
+    rotation_washer_h = top_washer_h
+    top_washer_z = top_washer_h + compression_gap_h
 
+    rotation_washer = cylinder(r1=75 / 2, r2=75 / 2, h=rotation_washer_h, center=False, _fn=180)
+    top_washer = cylinder(r1=75 / 2, r2=75 / 2 - 5, h=top_washer_h, center=False, _fn=180).up(
+        pipe_r + rotate_part_h + compression_gap_h / 2)
+    compression_gap_washer = cylinder(r1=120 / 2, r2=120 / 2, h=compression_gap_h, center=True, _fn=180).up(
+        rotate_part_h + pipe_r)
 
-# def middle_end_nut() -> Tuple[OpenSCADObject, P3]:
-#     l = 10
-#     nut = union()(buttress_threaded_nut(nutwidth=d * 2, id=d, l=l, pitch=1.5, _fa=1, _fs=0.5))
-#     # nut = intersection()(nut.up(l / 2), cube([0.75 * d, d, l], center=True).up(l / 2))
-#     return nut.rotate([0, 180, 0]).up(l / 2), (30, 30, l)
+    dummy_rod_pos1 = [bold_d + 5, 0, pipe_r + rotate_part_h]
+    dummy_rod = cylinder(r=pipe_r+0.2, h=120, center=True).rotate([90, 0, 0]).translate(dummy_rod_pos1)
+    pipe_1 = cylinder(r=pipe_r+rotate_part_h+2, h=90, center=True).rotate([90, 0, 0]).translate(dummy_rod_pos1)
+    dummy_rod_pos2 = [-(bold_d + 5), 0, pipe_r + rotate_part_h]
+    dummy_rod += cylinder(r=pipe_r+0.2, h=120, center=True).rotate([90, 0, 0]).translate(dummy_rod_pos2)
+    pipe_2 = cylinder(r=pipe_r+rotate_part_h+2, h=90, center=True).rotate([90, 0, 0]).translate(dummy_rod_pos2)
+
+    middle_hole = cylinder(r=bold_d / 2, h=120, center=True, _fn=180)
+    middle_hole_slopy = cylinder(r1=bold_d / 2+0.8, r2=bold_d / 2+0.1, h=top_washer_h+preview_fix*2, center=False, _fn=180).up(top_washer_z-preview_fix)
+
+    bottom_cutoff = cylinder(r=60, h=20).rotate([180,0,0])
+    top_cuttoff = cylinder(r=60, h=20).up(rotation_washer_h+compression_gap_h+rotation_washer_h)
+    bottom_part = (rotation_washer - dummy_rod) - middle_hole
+    top_bottom_threshold = bottom_cutoff + top_cuttoff
+    top_part = (top_washer + (pipe_1 + pipe_2) - compression_gap_washer - top_bottom_threshold -middle_hole) - dummy_rod - middle_hole_slopy
+
+    return [((bottom_part + top_part, (pipe_r * 2, pipe_r * 2, pipe_r * 2)), "joint_half"), ]
 
 
 def main(output_scad_basename, output_stl_basename):
     output: List[StlTask] = [
         *middle_bolt(),
-        *rod_cradle()
+        *make_joint_half()
         # (middle_end_nut(), "middle_end_nut")
     ]
     save_to_str_scad(output_scad_basename, output_stl_basename, output, verbose)
